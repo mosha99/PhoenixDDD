@@ -1,0 +1,6 @@
+@PhoenixDDD_HostAddress = http://localhost:5244
+
+GET {{PhoenixDDD_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
