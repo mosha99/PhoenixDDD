@@ -1,11 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using BuildingBlocks;
+using BuildingBlocks.Exception;
 using SharedIdentity;
 
 namespace Tender;
 
 public class Tender : AggregateBase<TenderId>
-{
+{ 
     private Tender() { }
 
     public static Tender CreateInstance(
@@ -15,10 +17,10 @@ public class Tender : AggregateBase<TenderId>
         [DisallowNull] PricingFrame<long> pricingFrame)
     {
 
-        if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Title is required");
-        if (string.IsNullOrWhiteSpace(description)) throw new ArgumentException("Description is required");
-        if (dateTimeFrame is null) throw new ArgumentException("DateTimeFrame is required");
-        if (pricingFrame is null) throw new ArgumentException("PricingFrame is required");
+        if (string.IsNullOrWhiteSpace(title)) throw new LogicException("Title is required");
+        if (string.IsNullOrWhiteSpace(description)) throw new LogicException("Description is required");
+        if (dateTimeFrame is null) throw new LogicException("DateTimeFrame is required");
+        if (pricingFrame is null) throw new LogicException("PricingFrame is required");
 
         var tender = new Tender()
         {
@@ -30,6 +32,7 @@ public class Tender : AggregateBase<TenderId>
             PricingFrame = pricingFrame,
         };
 
+        tender.AddEvent(new OpenTenderEvent());
         //todo Rise Open Event
 
         return tender;
@@ -39,7 +42,7 @@ public class Tender : AggregateBase<TenderId>
     public string Description { get; private init; } = null!;
     public DateTimeFrame DateTimeFrame { get; private init; } = null!;
     public PricingFrame<long> PricingFrame { get; private init; } = null!;
-    public IReadOnlyList<ContractorBid> Bids { get; private set; } = [];
+    public IReadOnlyCollection<ContractorBid> Bids { get; private set; } = new List<ContractorBid>();
     public TenderState State { get; private set; }
     public DateTime OpeDateTime { get; private init; }
     public DateTime? CloseDate { get; private set; }
@@ -48,31 +51,20 @@ public class Tender : AggregateBase<TenderId>
     public ContractorId? Winner => Bids.SingleOrDefault(x => x.Winner)?.ContractorId;
     public void AddBid(ContractorBid bid)
     {
-        if (State != TenderState.Open) throw new Exception("Cannot add Bid to Closed Tender");
+        if (State != TenderState.Open) throw new LogicException("Cannot add Bid to Closed Tender");
 
-        if (bid.Winner == true) throw new Exception("Cannot add Invalid Bid to Tender");
+        if (bid.Winner == true) throw new LogicException("Cannot add Invalid Bid to Tender");
 
-        if (DateTimeFrame.IsValidDate(DateTime.Now) != true) throw new Exception($"We are not allowed in the time frame. Allowed ({DateTimeFrame.Start:G} to {DateTimeFrame.End:G})");
+        if (DateTimeFrame.IsValidDate(DateTime.Now) != true) throw new LogicException($"We are not allowed in the time frame. Allowed ({DateTimeFrame.Start:G} to {DateTimeFrame.End:G})");
 
-        if (PricingFrame.IsValidAmount(bid.BidAmount) != true) throw new Exception($"Amount is not Allowed. Allowed ({PricingFrame.Start:N0} to {PricingFrame.End:N0})");
-
-        var bids = Bids.ToList();
-
-        var finalBid = bids.FirstOrDefault(x => x.ContractorId == bid.ContractorId);
-
-        if (finalBid is not null)
-        {
-            bid = finalBid.Modify(bid);
-            bids.Remove(finalBid);
-        }
-
-        bids.Add(bid);
-
-        Bids = bids.AsReadOnly();
+        if (PricingFrame.IsValidAmount(bid.BidAmount) != true) throw new LogicException($"Amount is not Allowed. Allowed ({PricingFrame.Start:N0} to {PricingFrame.End:N0})");
+        var list = Bids.ToList();
+        list.Add(bid);
+        Bids = list.AsReadOnly();
     }
     public void SetWinnerAndClose(ContractorId winner)
     {
-        if (State != TenderState.Open) throw new Exception("You Can Close Only Open Tender");
+        if (State != TenderState.Open) throw new LogicException("You Can Close Only Open Tender");
 
         var winnerBid = Bids.Single(x => x.ContractorId == winner);
 
@@ -82,20 +74,26 @@ public class Tender : AggregateBase<TenderId>
     }
     public void SetWinnerAndClose()
     {
-        var contractorBid = Bids.OrderByDescending(x => x.PreviousBid).First();
+        var contractorBid = Bids.OrderBy(x => x.BidAmount).First();
         SetWinnerAndClose(contractorBid.ContractorId);
     }
-    private void Close()
+    public void Close()
     {
-        var winner = Bids.Single(x => x.Winner);
+        if (!Bids.Any()) throw new LogicException("This Tender Not Have a Bid");
+
+        var winner = Bids.MinBy(x => x.BidAmount);
+
+        winner?.Win();
+
         State = TenderState.Closed;
+
         CloseDate = DateTime.Now;
         //todo Rise Win Event
     }
-    private void Cancel()
+    public void Cancel()
     {
-        if (State != TenderState.Open) throw new Exception("You Can Cancel Only Open Tender");
-        if (Bids.Any(x => x.Winner)) throw new Exception("Cannot Cancel Tender With Winner");
+        if (State != TenderState.Open) throw new LogicException("You Can Cancel Only Open Tender");
+        if (Bids.Any(x => x.Winner)) throw new LogicException("Cannot Cancel Tender With Winner");
         CancelDate = DateTime.Now;
         State = TenderState.Canceled;
 

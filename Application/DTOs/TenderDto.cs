@@ -7,8 +7,9 @@ public class TenderDto
 {
     public static TenderDto CreateInstance(Tender.Tender tender, IEnumerable<Contractor.Contractor> contractors)
     {
-        return new TenderDto()
+        var result = new TenderDto()
         {
+            Id = tender.Id,
             Title = tender.Title,
             Description = tender.Description,
             StartTimeFrame = tender.DateTimeFrame.Start,
@@ -23,8 +24,15 @@ public class TenderDto
             CloseDate = tender.CloseDate,
             CancelDate = tender.CancelDate
         };
+
+        result.Bids = tender.Bids
+            .Where(x => contractors.Any(b => b.Id == x.ContractorId))
+            .Select(x => BidDto.CreateInstance(x, contractors.First(c => c.Id == x.ContractorId)));
+
+        return result;
     }
 
+    public long Id { get; set; }
     public string Title { get; set; } = null!;
     public string Description { get; set; } = null!;
     public DateTime StartTimeFrame { get; set; }

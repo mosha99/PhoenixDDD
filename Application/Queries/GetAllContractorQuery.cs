@@ -4,7 +4,6 @@ using MediatR;
 
 namespace Application.Queries;
 
-public class GetAllContractorQuery() : BaseFilter<Contractor.Contractor>, IRequest<ListResult<ContractorDto>>
+public class GetAllContractorQuery() : BaseListQuery<Contractor.Contractor,GetAllContractorFilter>, IRequest<ListResult<ContractorDto>>
 {
-    public override void InitExpression() { }
 }

@@ -2,5 +2,5 @@
 
 public interface IAggregateEvent
 {
-    Task Invoke();
-}
+    public object Sender { get; set; }
+};

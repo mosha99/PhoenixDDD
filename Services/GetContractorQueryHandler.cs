@@ -1,5 +1,6 @@
 ﻿using Application.DTOs;
 using Application.Queries;
+using BuildingBlocks.Exception;
 using Contractor;
 using MediatR;
 using SharedIdentity;
@@ -12,6 +13,8 @@ public class GetContractorQueryHandler(ITenderRepository tenderRepository, ICont
     public async Task<ContractorDto> Handle(GetContractorQuery request, CancellationToken cancellationToken)
     {
         var contractor = await contractorRepository.GetByIdAsync(new ContractorId(request.ContractorId));
+
+        if (contractor == null) throw new LogicException("Contractor Not Find");
 
         var tenders = await tenderRepository.GetByContractor(contractor.Id);
 

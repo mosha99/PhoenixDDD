@@ -1,4 +1,5 @@
 ﻿using Application.Commands;
+using BuildingBlocks.Exception;
 using Contractor;
 using MediatR;
 using SharedIdentity;
@@ -11,10 +12,10 @@ public class BidToTenderCommandHandler(ITenderRepository tenderRepository, ICont
     public async Task Handle(BidToTenderCommand request, CancellationToken cancellationToken)
     {
         var contractor = (await contractorRepository.GetByIdAsync(new ContractorId(request.ContractorId)))
-                         ?? throw new ArgumentException("Contractor Not Find");
+                         ?? throw new LogicException("Contractor Not Find");
 
         var tender = (await tenderRepository.GetByIdAsync(new TenderId(request.TenderId)))
-                     ?? throw new ArgumentException("Tender Not Find");
+                     ?? throw new LogicException("Tender Not Find");
 
         var bid = new ContractorBid(contractor.Id, request.BidAmount);
 
