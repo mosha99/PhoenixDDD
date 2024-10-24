@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using BuildingBlocks;
 using BuildingBlocks.Exception;
 using SharedIdentity;
+using Tender.Exception;
 
 namespace Tender;
 
@@ -62,28 +63,13 @@ public class Tender : AggregateBase<TenderId>
         list.Add(bid);
         Bids = list.AsReadOnly();
     }
-    public void SetWinnerAndClose(ContractorId winner)
-    {
-        if (State != TenderState.Open) throw new LogicException("You Can Close Only Open Tender");
-
-        var winnerBid = Bids.Single(x => x.ContractorId == winner);
-
-        winnerBid.Win();
-
-        Close();
-    }
-    public void SetWinnerAndClose()
-    {
-        var contractorBid = Bids.OrderBy(x => x.BidAmount).First();
-        SetWinnerAndClose(contractorBid.ContractorId);
-    }
     public void Close()
     {
-        if (!Bids.Any()) throw new LogicException("This Tender Not Have a Bid");
+        if (!Bids.Any()) throw new TenderInvalidStateForCloseException();
 
         var winner = Bids.MinBy(x => x.BidAmount);
 
-        winner?.Win();
+        winner = winner! with { Winner = true };
 
         State = TenderState.Closed;
 

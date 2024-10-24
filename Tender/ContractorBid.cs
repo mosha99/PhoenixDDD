@@ -2,12 +2,8 @@
 
 namespace Tender;
 
-public sealed class ContractorBid(ContractorId contractorId, long bidAmount)
+public sealed record ContractorBid(ContractorId ContractorId, long BidAmount)
 {
-    public ContractorId ContractorId { get; private set; } = contractorId;
-    public long BidAmount { get; private set; } = bidAmount;
-    public bool Winner { get; private set; } = false;
-    public DateTime CreateDate { get; private set; } = DateTime.Now;
-    public void Win()
-        => Winner = true;
+    public bool Winner { get; init; } = false;
+    public DateTime CreateDate { get; } = DateTime.Now;
 }

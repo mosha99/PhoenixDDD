@@ -1,5 +1,5 @@
 ﻿using BuildingBlocks;
-using BuildingBlocks.Exception;
+using Contractor.Exception;
 using SharedIdentity;
 
 namespace Contractor;
@@ -8,8 +8,8 @@ public class Contractor : AggregateBase<ContractorId>
 {
     public static Contractor CreateInstance(string name, string phoneNumber)
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Length < 3) throw new LogicException("Name Is Required And Must Grater Then 2 Character");
-        if (string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length != 11) throw new LogicException("PhoneNumber Is Required And Must Then 11 Character");
+        if (string.IsNullOrWhiteSpace(name) || name.Length < 3) throw new InvalidContractorNameException();
+        if (string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length != 11) throw new InvalidContractorPhoneNumberException();
         return new Contractor()
         {
             Name = name,
@@ -17,6 +17,6 @@ public class Contractor : AggregateBase<ContractorId>
         };
     }
 
-    public string Name { get; set; } = null!;
-    public string PhoneNumber { get; set; } = null!;
+    public string Name { get; private set; } = null!;
+    public string PhoneNumber { get; private set; } = null!;
 }
